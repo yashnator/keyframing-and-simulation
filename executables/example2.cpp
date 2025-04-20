@@ -12,7 +12,7 @@ using namespace glm;
 GL::Rasterizer r;
 GL::ShaderProgram program;
 
-// int nv = 4, nt = 2, ne = 4;
+int nv, nt, ne;
 
 std::vector<Bone> boneArray;
 std::vector<Vertex> vertices;  // Your Vertex struct
@@ -23,14 +23,12 @@ GL::AttribBuf vertexBuf, normalBuf;
 
 CameraControl camCtl;
 
-// Just one bone for simplicity
-// Bone rootBone("root", glm::mat4(1.0f), glm::mat4(1.0f), nullptr);
-// Bone headBone("head", glm::mat4(1.0f), glm::mat4(1.0f), nullptr);
-
 #define DBG(x) std::cout << to_string(x) << std::endl;
 
 void initializeBones() {
-    int nv = 0, nt = 0, ne = 0;
+    nv = 0;
+    nt = 0;
+    ne = 0;
     for(auto &bone: boneArray) {
         nv += bone.renderVertices.size();
         nt += bone.renderTriangles.size();
@@ -39,10 +37,13 @@ void initializeBones() {
     vec3 pos[nv], normals[nv];
     ivec3 triangles[nt];
     ivec2 edges[ne];
-    int vptr = 0, nptr = 0, tptr = 0, eptr = 0;
+    int vptr = 0, nptr = 0, tptr = 0, eptr = 0, bptr = 0;
+    int offset = 0;
     for(auto &bone: boneArray) {
+        ivec3 toff(offset);
+        ivec2 eoff(offset);
        for(auto& p: bone.renderTriangles) {
-           triangles[tptr] = p;
+           triangles[tptr] = p + toff;
            ++tptr;
        }
        for(auto &p: bone.renderVertices) {
@@ -52,11 +53,14 @@ void initializeBones() {
        for(auto &p: bone.renderNormals) {
            normals[nptr] = p;
            ++nptr;
+           vertices.emplace_back(Vertex(pos[nptr - 1], normals[nptr - 1], {bptr}));
        }
        for(auto &p: bone.renderEdges) {
-           edges[eptr] = p;
+           edges[eptr] = p + eoff;
            ++eptr;
        }
+       ++bptr;
+       offset += bone.renderVertices.size();
     }
     vertexBuf = r.createVertexAttribs(object, 0, nv, pos);
 	normalBuf = r.createVertexAttribs(object, 1, nv, normals);
@@ -67,34 +71,41 @@ void initializeBones() {
 void initializeScene() {
 
     // Mesh headCube = unitSphere(1, 1);
-    Mesh headCube = unitCube(1, 1, 1);
+    Mesh headSphere = unitSphere(25, 25);
+    Mesh torsoCube = unitCube(1, 1, 1);
+    boneArray.emplace_back(Bone("torso", glm::mat4(1.0f), glm::mat4(1.0f), nullptr));
     boneArray.emplace_back(Bone("head", glm::mat4(1.0f), glm::mat4(1.0f), nullptr));
-    boneArray[0].getMeshAttribs(headCube);
+    boneArray[0].getMeshAttribs(torsoCube);
+    boneArray[1].getMeshAttribs(headSphere);
+
+    // Moving head over torso
+    boneArray[0].updateBindPose(scale(mat4(1.0f), vec3(1.0f, 2.0f, 1.0f)));
+    boneArray[1].updateBindPose(translate(mat4(1.0f), vec3(0.0f, 2.0f, 0.0f)));
 	object = r.createObject();
     initializeBones();
 }
 
 void updateScene(float t) {
-    // float delta = 0.0f;
-	// float theta = glm::radians(20.0f * sin(t) + delta);  // Simple oscillating angle
-	// glm::quat rot = glm::angleAxis(theta, glm::vec3(1, 0, 0));
-	// rootBone.updateBone(vec3(0, 0, 0), rot);
+    float delta = 0.0f;
+	float theta = glm::radians(20.0f * sin(t) + delta);  // Simple oscillating angle
+	glm::quat rot = glm::angleAxis(theta, glm::vec3(0, 1, 0));
+	boneArray[1].updateBone(vec3(0, 0, 0), rot);
+	// boneArray[0].updateBone(vec3(0, 0, 0), rot);
 
-    // vec3 verticesData[nv], normalsData[nv];
-	// // // Update vertices and normals
-	// for (int i = 0; i < nv; i++) {
-		// const Vertex &v = vertices[i];
-		// vec3 worldPos = vec3(rootBone.vertTransform * vec4(v.position, 1.0));
-		// verticesData[i] = worldPos;
+    vec3 verticesData[nv], normalsData[nv];
+	// Update vertices and normals
+	for (int i = 0; i < nv; i++) {
+		// Vertex v = vertices[i];
+		vec3 worldPos = vec3(boneArray[vertices[i].boneIDs[0]].vertTransform * vec4(vertices[i].position, 1.0));
+		verticesData[i] = worldPos;
 
 		// Normal matrix = inverse transpose of upper-left 3x3 of transform
-		// mat3 normalMatrix = inverseTranspose(mat3(rootBone.vertTransform));
-		// vec3 worldNormal = normalize(normalMatrix * v.normal);
-		// normalsData[i] = worldNormal;
-	// }
-
-	// r.updateVertexAttribs(vertexBuf, nv, verticesData);
-	// r.updateVertexAttribs(normalBuf, nv, normalsData);
+		mat3 normalMatrix = inverseTranspose(boneArray[vertices[i].boneIDs[0]].vertTransform);
+		vec3 worldNormal = normalize(normalMatrix * vec4(vertices[i].normal, 0.0f));
+		normalsData[i] = vec3(worldNormal);
+	}
+	r.updateVertexAttribs(vertexBuf, nv, verticesData);
+	r.updateVertexAttribs(normalBuf, nv, normalsData);
 }
 
 

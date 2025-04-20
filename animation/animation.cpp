@@ -8,14 +8,16 @@ Bone::Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTr
     boneName(__boneName),
     offsetMatrix(__offsetMatrix),
     localTransform(__localTransform),
-    parent(__parent)
+    parent(__parent),
+    vertTransform(mat4(1.0f))
 { }
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
     boneName("Unnamed bone"),
     offsetMatrix(__offsetMatrix),
     localTransform(__localTransform),
-    parent(__parent)
+    parent(__parent),
+    vertTransform(mat4(1.0f))
 { }
 
 // methods
@@ -74,7 +76,11 @@ Vertex::Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __bone
     position(__position),
     normal(__normal),
     boneIDs(__boneIDs)
-{ }
+{
+    for(int i = 0; i < __boneIDs.size(); ++i) {
+        weights.emplace_back(1.0f / float(__boneIDs.size()));
+    }
+}
 
 // methods
 
