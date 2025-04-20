@@ -1,6 +1,7 @@
 #include "camera.hpp"
 
 #include <iostream>
+#include "../animation/animation.hpp"
 
 using namespace COL781;
 namespace GL = COL781::OpenGL;
@@ -44,7 +45,7 @@ void initializeScene() {
 
 void updateScene(float t) {
 	float freq = 2, amp = 1;
-	float phase0 = 0, phase1 = 0.5;
+	float phase0 = 0, phase1 = 0.0;
 	float theta0 = amp*cos(freq*t + phase0), theta1 = amp*cos(freq*t + phase1);
 	vertices[0] = vec3(0, -cos(theta0), sin(theta0));
 	vertices[1] = vec3(1, -cos(theta1), sin(theta1));
@@ -54,6 +55,7 @@ void updateScene(float t) {
 	normals[2] = glm::normalize(glm::cross(vertices[3]-vertices[2], vertices[1]-vertices[2]));
 	normals[3] = glm::normalize(glm::cross(vertices[0]-vertices[3], vertices[2]-vertices[3]));
 	r.updateVertexAttribs(normalBuf, nv, normals);
+    std::cout << to_string(normals[0]) << std::endl;
 }
 
 int main() {

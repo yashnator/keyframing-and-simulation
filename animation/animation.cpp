@@ -37,6 +37,26 @@ glm::mat4 Bone::getVertTransform() const {
     return vertTransform;
 }
 
+void Bone::getMeshAttribs(Mesh &mesh) {
+    mesh.getMeshAttribs(totalVertices,
+                            numberOfTriangles,
+                            numberOfEdges,
+                            renderVertices,
+                            renderTriangles,
+                            renderEdges,
+                            renderNormals);
+}
+
+void Bone::updateBindPose(const glm::mat4& transform) {
+    glm::mat4 invT = glm::inverseTranspose(transform);
+    for(auto &vert: renderVertices) {
+        vert = glm::vec3(transform * glm::vec4(vert, 1.0f));
+    }
+    for(auto &nrml: renderNormals) {
+        nrml = glm::vec3(transform * glm::vec4(nrml, 0.0f));
+    }
+}
+
 // ------------------ VERTEX METHODS ------------- //
 
 // ctors

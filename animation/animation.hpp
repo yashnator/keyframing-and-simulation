@@ -15,6 +15,11 @@
 #include <string>
 #include <vector>
 
+#include "halfedge.hpp"
+#include "shapes.hpp"
+
+using namespace glm;
+
 class Bone
 {
     /* The member functions are
@@ -35,13 +40,27 @@ class Bone
     Bone* parent = nullptr;
     std::vector<Bone*> children;
 
-    // public:
-        Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
-        Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
 
-        void updateBone(const glm::mat4& transform);
-        void updateBone(const glm::vec3& pos, const glm::quat& rot);
-        glm::mat4 getVertTransform() const;
+    int totalVertices;
+    int numberOfTriangles;
+    int numberOfEdges;
+    std::vector<vec3> renderVertices;
+    std::vector<ivec3> renderTriangles;
+    std::vector<ivec2> renderEdges;
+    std::vector<vec3> renderNormals;
+    std::pair<int, int> globalRange;
+
+    // public:
+    Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
+    Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
+
+    void updateBone(const glm::mat4& transform);
+    void updateBone(const glm::vec3& pos, const glm::quat& rot);
+    glm::mat4 getVertTransform() const;
+
+    void updateBindPose(const glm::mat4& transform);
+
+    void getMeshAttribs(Mesh &mesh);
 };
 
 // We go from bone's space to world space by multiplying with offset matrix

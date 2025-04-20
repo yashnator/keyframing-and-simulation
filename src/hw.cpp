@@ -33,7 +33,7 @@ namespace COL781 {
 					error = "INVALID_FRAMEBUFFER_OPERATION";
 					break;
 				}
-				std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+				// std::cout << error << " | " << file << " (" << line << ")" << std::endl;
 			}
 			return errorCode;
 		}
