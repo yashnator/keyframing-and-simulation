@@ -18,9 +18,9 @@ Bone::Bone(std::string __boneName, Bone* __parent, glm::mat4 __offsetMatrix, glm
         // offsetMatrix = parent->offsetMatrix * __offsetMatrix;
     vertTransform = offsetMatrix;
     vertTransformIT = inverseTranspose(vertTransform);
-    if(parent) {
-        parent->children.push_back(this);
-    }
+    // if(parent) {
+    //     parent->children.push_back(this);
+    // }
 }
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
@@ -90,7 +90,7 @@ void Bone::updateInit(const glm::mat4 &transform) {
 }
 
 void Bone::updateAll() {
-    std::cout << boneName << std::endl;
+    // std::cout << boneName << std::endl;
     if (parent)
         globalTransform = parent->globalTransform * offsetMatrix * localTransform;
     else

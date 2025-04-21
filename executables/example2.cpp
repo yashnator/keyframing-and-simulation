@@ -66,7 +66,7 @@ void initializeBones() {
            edges[eptr] = p + eoff;
            ++eptr;
        }
-       std::cout << bptr << std::endl;
+    //    std::cout << bptr << std::endl;
        boneIdx[bone.boneName] = bptr;
        ++bptr;
        offset += bone.renderVertices.size();
@@ -146,6 +146,7 @@ void updateScene(float t) {
     float delta = 0.0f;
 	float theta = glm::radians(20.0f * sin(t) + delta);  // Simple oscillating angle
 	glm::quat rot = glm::angleAxis(theta, glm::vec3(1, 0, 0));
+    boneArray[0].updateAll();
 	boneArray[0].updateBone(mat4(1.0f));
 	boneArray[1].updateBone(vec3(0, 0, 0), rot);
 	boneArray[2].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
