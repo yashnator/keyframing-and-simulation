@@ -129,7 +129,20 @@ void initializeScene() {
     boneArray.back().updateBindPose(translate(mat4(1.0f), vec3(-0.5f, -2.0f, 0.0f)));
     boneArray[3].children.push_back(&boneArray[5]);
 
+    //Legs
+    boneArray.emplace_back(Bone("left leg", &boneArray[0]));
+    boneArray.back().getMeshAttribs(torsoCube);
+    boneArray.back().updateInit(scale(mat4(1.0f), vec3(0.8f, 3.0f, 0.8f)));
+    boneArray.back().updateInit(translate(mat4(1.0f), vec3(0.5f, -1.0f, 0.0f)));
+    boneArray.back().updateBindPose(translate(mat4(1.0f), vec3(0.0f,-2.4f, 0.0f)));
+    boneArray[0].children.push_back(&boneArray[6]);
 
+    boneArray.emplace_back(Bone("right leg", &boneArray[0]));
+    boneArray.back().getMeshAttribs(torsoCube);
+    boneArray.back().updateInit(scale(mat4(1.0f), vec3(0.8f, 3.0f, 0.8f)));
+    boneArray.back().updateInit(translate(mat4(1.0f), vec3(-0.5f, -1.0f, 0.0f)));
+    boneArray.back().updateBindPose(translate(mat4(1.0f), vec3(0.0f,-2.4f, 0.0f)));
+    boneArray[0].children.push_back(&boneArray[7]);
 
     // Updating initial positions
 
@@ -151,8 +164,10 @@ void updateScene(float t) {
 	boneArray[1].updateBone(vec3(0, 0, 0), rot);
 	boneArray[2].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
 	boneArray[3].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
-    boneArray[4].updateBone(vec3(0, 0, 0), mat4(1.0f));
-    boneArray[5].updateBone(vec3(0, 0, 0), mat4(1.0f));
+    boneArray[4].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
+    boneArray[5].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[6].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[7].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
 
     vec3 verticesData[nv], normalsData[nv];
 	for (int i = 0; i < nv; i++) {
