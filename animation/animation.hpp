@@ -37,7 +37,7 @@ class Bone
     glm::mat4 localTransform;
     glm::mat4 globalTransform;
     glm::mat4 vertTransform, vertTransformIT;
-    const Bone* parent;
+    Bone* parent;
     std::vector<Bone*> children;
 
 
@@ -51,7 +51,10 @@ class Bone
     std::pair<int, int> globalRange;
 
     // public:
-    Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
+    Bone(std::string __boneName,
+         Bone* __parent = nullptr,
+         glm::mat4 __offsetMatrix = mat4(1.0f),
+         glm::mat4 __localTransform = mat4(1.0f));
     Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
 
     void updateBone(const glm::mat4& transform);
@@ -59,9 +62,10 @@ class Bone
     glm::mat4 getVertTransform() const;
 
     void updateBindPose(const glm::mat4& transform);
+    void updateInit(const glm::mat4& transform);
 
     void getMeshAttribs(Mesh &mesh);
-    void update();
+    void updateAll();
 };
 
 // We go from bone's space to world space by multiplying with offset matrix

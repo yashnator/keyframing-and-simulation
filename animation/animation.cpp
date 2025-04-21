@@ -4,7 +4,7 @@
 
 // ctors
 
-Bone::Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
+Bone::Bone(std::string __boneName, Bone* __parent, glm::mat4 __offsetMatrix, glm::mat4 __localTransform):
     boneName(__boneName),
     offsetMatrix(__offsetMatrix),
     offsetMatrixIT(inverseTranspose(__offsetMatrix)),
@@ -13,7 +13,15 @@ Bone::Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTr
     parent(__parent),
     vertTransform(mat4(1.0f)),
     vertTransformIT(mat4(1.0f))
-{ }
+{
+    // if(parent)
+        // offsetMatrix = parent->offsetMatrix * __offsetMatrix;
+    vertTransform = offsetMatrix;
+    vertTransformIT = inverseTranspose(vertTransform);
+    if(parent) {
+        parent->children.push_back(this);
+    }
+}
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
     boneName("Unnamed bone"),
@@ -30,12 +38,13 @@ Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent 
 
 void Bone::updateBone(const glm::mat4& transform) {
     localTransform = transform;
-    if (parent)
-        globalTransform = parent->globalTransform * localTransform;
-    else
-        globalTransform = localTransform;
-    vertTransform = offsetMatrix * globalTransform * inverse(offsetMatrix);
-    vertTransformIT = inverseTranspose(vertTransform);
+    // if (parent)
+        // globalTransform = parent->globalTransform * offsetMatrix * localTransform;
+    // else
+        // globalTransform = offsetMatrix * localTransform;
+    // vertTransform = offsetMatrix * transform * inverse(offsetMatrix);
+    // vertTransform = globalTransform;
+    // vertTransformIT = inverseTranspose(vertTransform);
 }
 
 void Bone::updateBone(const glm::vec3& pos, const glm::quat& rot) {
@@ -60,11 +69,37 @@ void Bone::updateBindPose(const glm::mat4& transform) {
     glm::mat4 invT = glm::inverseTranspose(transform);
     offsetMatrix = offsetMatrix * transform;
     offsetMatrixIT = inverseTranspose(offsetMatrix);
+    // for(auto &vert: renderVertices) {
+    //     vert = glm::vec3(transform * glm::vec4(vert, 1.0f));
+    // }
+    // for(auto &nrml: renderNormals) {
+    //     nrml = glm::vec3(invT * glm::vec4(nrml, 0.0f));
+    // }
+    vertTransform = offsetMatrix;
+    vertTransformIT = inverseTranspose(vertTransform);
+}
+
+void Bone::updateInit(const glm::mat4 &transform) {
+    glm::mat4 invT = glm::inverseTranspose(transform);
     for(auto &vert: renderVertices) {
         vert = glm::vec3(transform * glm::vec4(vert, 1.0f));
     }
     for(auto &nrml: renderNormals) {
         nrml = glm::vec3(invT * glm::vec4(nrml, 0.0f));
+    }
+}
+
+void Bone::updateAll() {
+    std::cout << boneName << std::endl;
+    if (parent)
+        globalTransform = parent->globalTransform * offsetMatrix * localTransform;
+    else
+        globalTransform = offsetMatrix * localTransform;
+    // vertTransform = offsetMatrix * transform * inverse(offsetMatrix);
+    vertTransform = globalTransform;
+    vertTransformIT = inverseTranspose(vertTransform);
+    for(auto &child: children) {
+        child->updateAll();
     }
 }
 
