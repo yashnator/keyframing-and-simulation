@@ -17,6 +17,7 @@
 
 #include "halfedge.hpp"
 #include "shapes.hpp"
+#include "numerical_methods.hpp"
 
 using namespace glm;
 

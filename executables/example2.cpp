@@ -85,7 +85,7 @@ void initializeScene() {
     boneArray.reserve(100);
     // Mesh headCube = unitSphere(1, 1);
     Mesh headSphere = unitSphere(25, 25);
-    Mesh torsoCube = unitCube(1, 1, 1);
+    Mesh torsoCube = unitCube(3, 3, 3);
 
     // Torso is the root of all bones
     boneArray.emplace_back(Bone("torso"));
@@ -151,16 +151,14 @@ void initializeScene() {
 	object = r.createObject();
     initializeBones();
 
-
 }
 
 
 void updateScene(float t) {
     float delta = 0.0f;
-	float theta = glm::radians(20.0f * sin(t) + delta);  // Simple oscillating angle
+	float theta = glm::radians(30.0f * sin(t) + delta);  // Simple oscillating angle
 	glm::quat rot = glm::angleAxis(theta, glm::vec3(1, 0, 0));
-    boneArray[0].updateAll();
-	boneArray[0].updateBone(mat4(1.0f));
+	boneArray[0].updateBone(glm::translate(mat4(1.0f), vec3(0.0f, 0.0f, 5.0*sin(t))));
 	boneArray[1].updateBone(vec3(0, 0, 0), rot);
 	boneArray[2].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
 	boneArray[3].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
@@ -168,6 +166,7 @@ void updateScene(float t) {
     boneArray[5].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
     boneArray[6].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
     boneArray[7].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
+    boneArray[0].updateAll();
 
     vec3 verticesData[nv], normalsData[nv];
 	for (int i = 0; i < nv; i++) {
@@ -176,6 +175,52 @@ void updateScene(float t) {
 	r.updateVertexAttribs(vertexBuf, nv, verticesData);
 	r.updateVertexAttribs(normalBuf, nv, normalsData);
 }
+
+void updateSceneCatmull(float t) {
+    float t1 = 0.0f;
+    float t2 = 1.0f;
+    float t3 = 1.5f;
+    float t4 = 2.0f;
+    float t5 = 4.5f;
+
+    float p0 = 0.0f;
+    float p1 = 5.0f;
+    float p2 = -5.0f;
+    float p3 = 10.0f;
+    float p4 = -10.0f;
+
+	float theta = catmullRom5NonUniform(t1, t2, t3, t4, t5, p0, p1, p2, p3, p4, t);
+    // std::cout<<t<<" "<<theta<<std::endl;
+
+    // std::cout<<theta<<std::endl;
+
+    float q0 = 0.0f;
+    float q1 = 0.5f;
+    float q2 = 1.0f;
+    float q3 = 1.5f;
+    float q4 = 2.0f;
+
+    theta = glm::radians(theta);  // Simple oscillating angle
+    float move = catmullRom5NonUniform(t1, t2,t3,t4,t5, q0, q1, q2, q3, q4, t);
+	glm::quat rot = glm::angleAxis(theta, glm::vec3(1, 0, 0));
+	boneArray[0].updateBone(glm::translate(mat4(1.0f), vec3(0.0f, 0.0f, move)));
+	boneArray[1].updateBone(vec3(0, 0, 0), rot);
+	boneArray[2].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
+	boneArray[3].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[4].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
+    boneArray[5].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[6].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[7].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
+    boneArray[0].updateAll();
+
+    vec3 verticesData[nv], normalsData[nv];
+	for (int i = 0; i < nv; i++) {
+        setVertData(verticesData[i], normalsData[i], boneArray[vertices[i].boneIDs[0]], vertices[i]);
+	}
+	r.updateVertexAttribs(vertexBuf, nv, verticesData);
+	r.updateVertexAttribs(normalBuf, nv, normalsData);
+}
+
 
 
 int main() {
@@ -196,7 +241,10 @@ int main() {
 	while (!r.shouldQuit()) {
         float t = SDL_GetTicks64()*1e-3;
 
-		updateScene(t);
+        if(t<1) continue;
+		// updateScene(t);
+        updateSceneCatmull(t);
+        if(t>5) break;
 
 		camCtl.update();
 		Camera &camera = camCtl.camera;
