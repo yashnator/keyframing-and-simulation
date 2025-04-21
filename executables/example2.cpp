@@ -69,12 +69,12 @@ void initializeBones() {
 }
 
 void initializeScene() {
-
+    boneArray.reserve(100);
     // Mesh headCube = unitSphere(1, 1);
     Mesh headSphere = unitSphere(25, 25);
-    Mesh torsoCube = unitCube(1, 1, 1);
+    Mesh torsoCube = unitCube(5, 5, 5);
     boneArray.emplace_back(Bone("torso", glm::mat4(1.0f), glm::mat4(1.0f), nullptr));
-    boneArray.emplace_back(Bone("head", glm::mat4(1.0f), glm::mat4(1.0f), nullptr));
+    boneArray.emplace_back(Bone("head", glm::mat4(1.0f), glm::mat4(1.0f), &boneArray[0]));
     boneArray[0].getMeshAttribs(torsoCube);
     boneArray[1].getMeshAttribs(headSphere);
 
@@ -85,24 +85,21 @@ void initializeScene() {
     initializeBones();
 }
 
+void setVertData(vec3 &vertData, vec3& normalData, Bone &bone, Vertex &v) {
+    vertData = vec3(bone.vertTransform * vec4(v.position, 1.0f));
+    normalData = vec3(bone.vertTransformIT * vec4(v.normal, 0.0f));
+}
+
 void updateScene(float t) {
     float delta = 0.0f;
 	float theta = glm::radians(20.0f * sin(t) + delta);  // Simple oscillating angle
 	glm::quat rot = glm::angleAxis(theta, glm::vec3(0, 1, 0));
+	boneArray[0].updateBone(mat4(1.0f));
 	boneArray[1].updateBone(vec3(0, 0, 0), rot);
-	// boneArray[0].updateBone(vec3(0, 0, 0), rot);
 
     vec3 verticesData[nv], normalsData[nv];
-	// Update vertices and normals
 	for (int i = 0; i < nv; i++) {
-		// Vertex v = vertices[i];
-		vec3 worldPos = vec3(boneArray[vertices[i].boneIDs[0]].vertTransform * vec4(vertices[i].position, 1.0));
-		verticesData[i] = worldPos;
-
-		// Normal matrix = inverse transpose of upper-left 3x3 of transform
-		mat3 normalMatrix = inverseTranspose(boneArray[vertices[i].boneIDs[0]].vertTransform);
-		vec3 worldNormal = normalize(normalMatrix * vec4(vertices[i].normal, 0.0f));
-		normalsData[i] = vec3(worldNormal);
+        setVertData(verticesData[i], normalsData[i], boneArray[vertices[i].boneIDs[0]], vertices[i]);
 	}
 	r.updateVertexAttribs(vertexBuf, nv, verticesData);
 	r.updateVertexAttribs(normalBuf, nv, normalsData);
@@ -126,6 +123,7 @@ int main() {
 
 	while (!r.shouldQuit()) {
         float t = SDL_GetTicks64()*1e-3;
+
 		updateScene(t);
 
 		camCtl.update();
@@ -141,8 +139,6 @@ int main() {
 		r.setUniform(program, "lightPos", camera.position);
 		r.setUniform(program, "viewPos", camera.position);
 		r.setUniform(program, "lightColor", vec3(1.0f, 1.0f, 1.0f));
-
-        // std::cout << glm::to_string(camera.position) << std::endl;
 
 		r.setupFilledFaces();
         glm::vec3 orange(1.0f, 0.6f, 0.2f);

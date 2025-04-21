@@ -33,11 +33,11 @@ class Bone
     */
     public:
     std::string boneName;
-    glm::mat4 offsetMatrix; // We keep inverse of bind pose matrix handy
+    glm::mat4 offsetMatrix, offsetMatrixIT; // We keep inverse of bind pose matrix handy
     glm::mat4 localTransform;
     glm::mat4 globalTransform;
-    glm::mat4 vertTransform;
-    Bone* parent = nullptr;
+    glm::mat4 vertTransform, vertTransformIT;
+    const Bone* parent;
     std::vector<Bone*> children;
 
 
@@ -61,6 +61,7 @@ class Bone
     void updateBindPose(const glm::mat4& transform);
 
     void getMeshAttribs(Mesh &mesh);
+    void update();
 };
 
 // We go from bone's space to world space by multiplying with offset matrix

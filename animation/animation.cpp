@@ -4,20 +4,26 @@
 
 // ctors
 
-Bone::Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent):
+Bone::Bone(std::string __boneName, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
     boneName(__boneName),
     offsetMatrix(__offsetMatrix),
+    offsetMatrixIT(inverseTranspose(__offsetMatrix)),
     localTransform(__localTransform),
+    globalTransform(mat4(1.0f)),
     parent(__parent),
-    vertTransform(mat4(1.0f))
+    vertTransform(mat4(1.0f)),
+    vertTransformIT(mat4(1.0f))
 { }
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
     boneName("Unnamed bone"),
     offsetMatrix(__offsetMatrix),
+    offsetMatrixIT(inverseTranspose(__offsetMatrix)),
     localTransform(__localTransform),
+    globalTransform(mat4(1.0f)),
     parent(__parent),
-    vertTransform(mat4(1.0f))
+    vertTransform(mat4(1.0f)),
+    vertTransformIT(mat4(1.0f))
 { }
 
 // methods
@@ -28,7 +34,8 @@ void Bone::updateBone(const glm::mat4& transform) {
         globalTransform = parent->globalTransform * localTransform;
     else
         globalTransform = localTransform;
-    vertTransform = globalTransform * offsetMatrix;
+    vertTransform = offsetMatrix * globalTransform * inverse(offsetMatrix);
+    vertTransformIT = inverseTranspose(vertTransform);
 }
 
 void Bone::updateBone(const glm::vec3& pos, const glm::quat& rot) {
@@ -51,11 +58,13 @@ void Bone::getMeshAttribs(Mesh &mesh) {
 
 void Bone::updateBindPose(const glm::mat4& transform) {
     glm::mat4 invT = glm::inverseTranspose(transform);
+    offsetMatrix = offsetMatrix * transform;
+    offsetMatrixIT = inverseTranspose(offsetMatrix);
     for(auto &vert: renderVertices) {
         vert = glm::vec3(transform * glm::vec4(vert, 1.0f));
     }
     for(auto &nrml: renderNormals) {
-        nrml = glm::vec3(transform * glm::vec4(nrml, 0.0f));
+        nrml = glm::vec3(invT * glm::vec4(nrml, 0.0f));
     }
 }
 
