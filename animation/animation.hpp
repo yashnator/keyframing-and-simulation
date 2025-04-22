@@ -23,7 +23,7 @@ using namespace glm;
 
 #define DBG(x) std::cout << #x << " " << to_string(x) << std::endl;
 
-const vec3 const_force(0.0f, -9.81f, 0.0f);
+const vec3 g(0.0f, -9.81f, 0.0f);
 
 class Bone
 {

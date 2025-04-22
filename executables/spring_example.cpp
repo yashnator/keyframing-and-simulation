@@ -25,7 +25,7 @@ CameraControl camCtl;
 
 std::map<std::string, int> boneIdx;
 
-int m = 2, n = 2;
+int m = 10, n = 10;
 Mesh cloth = unitSquare(n,m);
 
 void setVertData(vec3 &vertData, vec3& normalData, Bone &bone, Vertex &v) {
@@ -94,13 +94,13 @@ void initializeScene() {
 	object = r.createObject();
     initializeBones();
     for(int i = 0; i < nv; ++i) {
-        vertices[i].mass = 1.0f;
+        vertices[i].mass = 0.1f;
         // if(i > 1) vertices[i].isFixed = true;
         // DBG(vertices[i].position)
         // std::cout << vertices[i].isFixed << std::endl;
     }
     float ks = 5.0f * 1e0;
-    float kd = 100.0f;
+    float kd = 1.0f;
     // vertices[0].addStructural(&vertices[1], ks, l0, kd);
     // vertices[0].addStructural(&vertices[2], ks, l0, kd);
     // vertices[2].addStructural(&vertices[3], ks, l0, kd);
@@ -114,12 +114,13 @@ void initializeScene() {
         int c1 = i/(n+1), c2 = i%(n+1);
         if(c2>0) vertices[i].addStructural(&vertices[i-1], 300.0f, length(vertices[i].position - vertices[i-1].position), kd);
         if(c1<m) vertices[i].addStructural(&vertices[i+(n+1)], 300.0f, length(vertices[i].position - vertices[i+(n+1)].position), kd);
-        // if(c2>0 && c1<m) vertices[i].addShear(&vertices[i+(n+1)-1], 1.0f, length(vertices[i].position - vertices[i+(n+1)-1].position), kd / 50.0f);
-        // if(c2<n && c1<m) vertices[i].addShear(&vertices[i+(n+1)+1], 1.0f, length(vertices[i].position - vertices[i+(n+1)+1].position), kd / 50.0f);
+        if(c2>0 && c1<m) vertices[i].addShear(&vertices[i+(n+1)-1], 120.0f, length(vertices[i].position - vertices[i+(n+1)-1].position), kd);
+        if(c2<n && c1<m) vertices[i].addShear(&vertices[i+(n+1)+1], 120.0f, length(vertices[i].position - vertices[i+(n+1)+1].position), kd);
         //second closest
-        // if(c2>1) vertices[i].addShear(&vertices[i-2], 0.2f, length(vertices[i].position - vertices[i-2].position), kd);
-        // if(c1<m-1) vertices[i].addShear(&vertices[i+2*(n+1)], 0.2f, length(vertices[i].position - vertices[i+2*(n+1)].position), kd);
+        if(c2>1) vertices[i].addShear(&vertices[i-2], 60.0f, length(vertices[i].position - vertices[i-2].position), kd);
+        if(c1<m-1) vertices[i].addShear(&vertices[i+2*(n+1)], 60.0f, length(vertices[i].position - vertices[i+2*(n+1)].position), kd);
         if(c1==m) vertices[i].isFixed = true;
+        // if(c1==m ) vertices[i].isFixed = true;
     }
 }
 

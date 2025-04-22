@@ -172,7 +172,7 @@ vec3 Vertex::getForce(Vertex *curr, Vertex* other, std::array<float, 3> &springD
 
     if(length(vij) < 0.01f) vij = vec3(0.0f);
 
-    std::cout << length(xij) - springData[1] << std::endl;
+    // std::cout << length(xij) - springData[1] << std::endl;
     float springForce = -1.0f * springData[0] * (length(xij) - springData[1]);
 
     float dampForce = -springData[2] * (dot(vij, xij_dir));
@@ -185,7 +185,7 @@ void Vertex::updateCurrentForces() {
     // if(isFixed) DBG(position)
     if(isFixed) return;
     assert(mass != 0);
-    vec3 totalForce = const_force;
+    vec3 totalForce = mass * g;
     // vec3 totalForce = vec3(0.0f);
     for(auto &other: structuralSprings) {
         totalForce += getForce(this, other.first, other.second);
@@ -196,9 +196,8 @@ void Vertex::updateCurrentForces() {
     for(auto &other: bendingSprings) {
         totalForce += getForce(this, other.first, other.second);
     }
-    DBG(totalForce - const_force)
     currentForce = totalForce;
-    DBG(currentForce)
+    // DBG(currentForce)
 }
 
 void Vertex::updateGenCords(float dt) {
@@ -206,5 +205,5 @@ void Vertex::updateGenCords(float dt) {
     assert(mass != 0);
     velocity = velocity + (currentForce / mass) * dt;
     position = position + velocity * dt;
-    DBG(position)
+    // DBG(position)
 }
