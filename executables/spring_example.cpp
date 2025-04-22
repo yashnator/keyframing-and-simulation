@@ -95,32 +95,36 @@ void initializeScene() {
         vertices[i].mass = 1.0f;
         if(i > 1) vertices[i].isFixed = true;
         // DBG(vertices[i].position)
-        std::cout << vertices[i].isFixed << std::endl;
+        // std::cout << vertices[i].isFixed << std::endl;
     }
-    float ks = 0.05f;
+    float ks = 5.0f * 1e1;
     float kd = ks / 10.0f;
-    float l0 = 1.5f;
+    float l0 = 0.75f;
+    float ldiag = glm::sqrt(2.0f);
     vertices[0].addStructural(&vertices[1], ks, l0, kd);
     vertices[0].addStructural(&vertices[2], ks, l0, kd);
     vertices[2].addStructural(&vertices[3], ks, l0, kd);
     vertices[1].addStructural(&vertices[3], ks, l0, kd);
+
+    vertices[0].addShear(&vertices[3], ks / 5.0f, ldiag, kd / 5.0f);
+    vertices[1].addShear(&vertices[2], ks / 5.0f, ldiag, kd / 5.0f);
 }
 
 
 void updateScene(float t) {
-    const float dt = 0.1f;
+    // const float dt = 0.1f;
     for(auto &vert: vertices) {
-        vert.updateGenCords(dt);
+        vert.updateGenCords(t);
     }
     vec3 verticesData[nv], normalsData[nv];
     for(int i = 0; i < nv; ++i) {
         verticesData[i] = vertices[i].position;
         normalsData[i] = vertices[i].normal;
         // if(i == 2) DBG(verticesData[i])
-        // if(vertices[i].isFixed) {
+        if(!vertices[i].isFixed) {
             // std::cout << i << std::endl;
             // DBG(vertices[i].position)
-        // }
+        }
     }
     r.updateVertexAttribs(vertexBuf, nv, verticesData);
 	r.updateVertexAttribs(normalBuf, nv, normalsData);
@@ -144,10 +148,13 @@ int main() {
 
 	initializeScene();
 
+    float tprev = SDL_GetTicks64()*1e-3;
+
 	while (!r.shouldQuit()) {
         float t = SDL_GetTicks64()*1e-3;
 
-        updateScene(t);
+        updateScene(t - tprev);
+        tprev = t;
 
 		camCtl.update();
 		Camera &camera = camCtl.camera;
