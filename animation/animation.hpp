@@ -21,6 +21,10 @@
 
 using namespace glm;
 
+#define DBG(x) std::cout << to_string(x) << std::endl;
+
+const vec3 const_force(0.0f, -9.81f, 0.0f);
+
 class Bone
 {
     /* The member functions are
@@ -77,18 +81,33 @@ class Vertex
     public:
     // Positions and normals are specified wrt the bone
     glm::vec3 position;
+    glm::vec3 velocity;
     glm::vec3 normal;
+    float mass;
+    bool isFixed;
     // glm::vec3 texCoords;
     std::vector<int> boneIDs;
     std::vector<float> weights;
     // vertex(glm::vec3 __position, glm::vec3 __normal, glm::vec3 texCoords, vector<int> boneIDs, vector<float> weights);
 
-    public:
-        Vertex();
-        Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __boneIDs, std::vector<float> __weights);
-        Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __boneIDs);
+    // Spring mass related things
+    // These store <vertex, <ks, l0, kd>>
+    // Convention: store adjacent springs in right handed fashion for easy normal computation
+    std::vector<std::pair<Vertex*, std::array<float, 3>>> structuralSprings;
+    std::vector<std::pair<Vertex*, std::array<float, 3>>> shearSprings;
+    std::vector<std::pair<Vertex*, std::array<float, 3>>> bendingSprings;
 
-        void attachToBone(int&& boneID) noexcept;
+    Vertex();
+    Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __boneIDs, std::vector<float> __weights);
+    Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __boneIDs);
+
+    void attachToBone(int&& boneID) noexcept;
+    vec3 getForce(Vertex *, Vertex *, std::array<float, 3> &);
+    void updateGenCords(float dt);
+    void updateNormal();
+    void addStructural(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
+    void addShear(Vertex *other, float ks = 0.0f, float lo = 0.0f, float kd = 0.0f);
+    void addBend(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
 };
 
 #endif //  __ANIMATIONS__

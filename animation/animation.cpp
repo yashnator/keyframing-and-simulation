@@ -113,13 +113,19 @@ Vertex::Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __bone
     position(__position),
     normal(__normal),
     boneIDs(__boneIDs),
-    weights(__weights)
+    weights(__weights),
+    velocity(vec3(0.0f)),
+    isFixed(false),
+    mass(0.0f)
 { }
 
 Vertex::Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __boneIDs):
     position(__position),
     normal(__normal),
-    boneIDs(__boneIDs)
+    boneIDs(__boneIDs),
+    velocity(0.0f),
+    isFixed(false),
+    mass(0.0f)
 {
     for(int i = 0; i < __boneIDs.size(); ++i) {
         weights.emplace_back(1.0f / float(__boneIDs.size()));
@@ -130,4 +136,61 @@ Vertex::Vertex(glm::vec3 __position, glm::vec3 __normal, std::vector<int> __bone
 
 void Vertex::attachToBone(int&& BoneID) noexcept {
     boneIDs.emplace_back(BoneID);
+}
+
+
+void Vertex::updateNormal() {
+    // Calculate normal from the people in structural springs
+    vec3 newNormal(0.0f);
+    for(int i = 0; i < structuralSprings.size(); ++i) {
+        vec3 x = structuralSprings[i].first->position - position;
+        vec3 y = structuralSprings[(i + 1) % structuralSprings.size()].first->position - position;
+        newNormal += cross(x, y);
+    }
+    normal = normalize(newNormal);
+}
+
+void Vertex::addStructural(Vertex *other, float ks, float l0, float kd) {
+    structuralSprings.push_back({other, {ks, l0, kd}});
+    other->structuralSprings.push_back({this, {ks, l0, kd}});
+}
+
+void Vertex::addShear(Vertex *other, float ks, float l0, float kd) {
+    shearSprings.push_back({other, {ks, l0, kd}});
+    other->shearSprings.push_back({this, {ks, l0, kd}});
+}
+
+void Vertex::addBend(Vertex *other, float ks, float l0, float kd) {
+    bendingSprings.push_back({other, {ks, l0, kd}});
+    other->bendingSprings.push_back({this, {ks, l0, kd}});
+}
+
+vec3 Vertex::getForce(Vertex *curr, Vertex* other, std::array<float, 3> &springData) {
+    vec3 xij = curr->position - other->position;
+    vec3 xij_dir = normalize(xij);
+    vec3 vij = curr->velocity - other->velocity;
+    float springForce = -springData[0] * (length(xij) - springData[0]);
+    float dampForce = -springData[2] * (dot(vij, xij_dir));
+    return (springForce + dampForce) * xij_dir;
+}
+
+void Vertex::updateGenCords(float dt) {
+    // if(isFixed) DBG(position)
+    if(isFixed) return;
+    assert(mass != 0);
+    vec3 totalForce = const_force;
+    for(auto &other: structuralSprings) {
+        totalForce += getForce(this, other.first, other.second);
+    }
+    for(auto &other: shearSprings) {
+        totalForce += getForce(this, other.first, other.second);
+    }
+    for(auto &other: bendingSprings) {
+        totalForce += getForce(this, other.first, other.second);
+    }
+    // DBG(totalForce)
+    velocity = velocity + (totalForce / mass) * dt;
+    position = position + velocity * dt;
+    // DBG(position)
+    // DBG(velocity * dt)
 }
