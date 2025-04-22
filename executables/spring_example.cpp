@@ -25,6 +25,9 @@ CameraControl camCtl;
 
 std::map<std::string, int> boneIdx;
 
+int m = 2, n = 2;
+Mesh cloth = unitSquare(n,m);
+
 void setVertData(vec3 &vertData, vec3& normalData, Bone &bone, Vertex &v) {
     vertData = vec3(bone.vertTransform * vec4(v.position, 1.0f));
     normalData = vec3(bone.vertTransformIT * vec4(v.normal, 0.0f));
@@ -81,40 +84,59 @@ void initializeBones() {
 
 void initializeScene() {
     boneArray.reserve(100);
-    // Mesh headCube = unitSphere(1, 1);
-    Mesh cloth = unitSquare(1, 1);
     // Torso is the root of all bones
     boneArray.emplace_back(Bone("torso"));
     boneArray.back().getMeshAttribs(cloth);
     boneArray.back().updateInit(translate(mat4(1.0f), vec3(-0.5f, -0.5f, 0.0f)));
+    boneArray.back().updateInit(scale(mat4(1.0f), vec3(3.0f, 3.0f, 3.0f)));
     boneArray.back().updateInit(rotate(mat4(1.0f), radians(-90.0f), vec3(1.0f, 0.0f, 0.0f)));
 
 	object = r.createObject();
     initializeBones();
     for(int i = 0; i < nv; ++i) {
         vertices[i].mass = 1.0f;
-        if(i > 1) vertices[i].isFixed = true;
+        // if(i > 1) vertices[i].isFixed = true;
         // DBG(vertices[i].position)
         // std::cout << vertices[i].isFixed << std::endl;
     }
-    float ks = 5.0f * 1e1;
-    float kd = ks / 10.0f;
-    float l0 = 0.75f;
-    float ldiag = glm::sqrt(2.0f);
-    vertices[0].addStructural(&vertices[1], ks, l0, kd);
-    vertices[0].addStructural(&vertices[2], ks, l0, kd);
-    vertices[2].addStructural(&vertices[3], ks, l0, kd);
-    vertices[1].addStructural(&vertices[3], ks, l0, kd);
+    float ks = 5.0f * 1e0;
+    float kd = 100.0f;
+    // vertices[0].addStructural(&vertices[1], ks, l0, kd);
+    // vertices[0].addStructural(&vertices[2], ks, l0, kd);
+    // vertices[2].addStructural(&vertices[3], ks, l0, kd);
+    // vertices[1].addStructural(&vertices[3], ks, l0, kd);
 
-    vertices[0].addShear(&vertices[3], ks / 5.0f, ldiag, kd / 5.0f);
-    vertices[1].addShear(&vertices[2], ks / 5.0f, ldiag, kd / 5.0f);
+    // vertices[0].addShear(&vertices[3], ks / 5.0f, ldiag, kd / 5.0f);
+    // vertices[1].addShear(&vertices[2], ks / 5.0f, ldiag, kd / 5.0f);
+
+    for(int i=0;i<(m+1)*(n+1);i++)
+    {
+        int c1 = i/(n+1), c2 = i%(n+1);
+        if(c2>0) vertices[i].addStructural(&vertices[i-1], 300.0f, length(vertices[i].position - vertices[i-1].position), kd);
+        if(c1<m) vertices[i].addStructural(&vertices[i+(n+1)], 300.0f, length(vertices[i].position - vertices[i+(n+1)].position), kd);
+        // if(c2>0 && c1<m) vertices[i].addShear(&vertices[i+(n+1)-1], 1.0f, length(vertices[i].position - vertices[i+(n+1)-1].position), kd / 50.0f);
+        // if(c2<n && c1<m) vertices[i].addShear(&vertices[i+(n+1)+1], 1.0f, length(vertices[i].position - vertices[i+(n+1)+1].position), kd / 50.0f);
+        //second closest
+        // if(c2>1) vertices[i].addShear(&vertices[i-2], 0.2f, length(vertices[i].position - vertices[i-2].position), kd);
+        // if(c1<m-1) vertices[i].addShear(&vertices[i+2*(n+1)], 0.2f, length(vertices[i].position - vertices[i+2*(n+1)].position), kd);
+        if(c1==m) vertices[i].isFixed = true;
+    }
 }
 
 
 void updateScene(float t) {
     // const float dt = 0.1f;
-    for(auto &vert: vertices) {
-        vert.updateGenCords(t);
+    t = 0.01f;
+    for(int i=0;i<nv;i++) vertices[i].updateCurrentForces();
+    for(int i=0;i<nv;i++)
+    {
+        vertices[i].updateGenCords(t);
+        cloth.vertices[i].position = vertices[i].position;
+    }
+    boneArray[0].getMeshAttribs(cloth);
+    for(int i=0;i<nv;i++)
+    {
+        vertices[i].normal = boneArray[0].renderNormals[i];
     }
     vec3 verticesData[nv], normalsData[nv];
     for(int i = 0; i < nv; ++i) {

@@ -23,7 +23,7 @@ GL::AttribBuf vertexBuf, normalBuf;
 
 CameraControl camCtl;
 
-#define DBG(x) std::cout << to_string(x) << std::endl;
+// #define DBG(x) std::cout << to_string(x) << std::endl;
 
 std::map<std::string, int> boneIdx;
 

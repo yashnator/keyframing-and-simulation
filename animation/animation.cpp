@@ -169,13 +169,19 @@ vec3 Vertex::getForce(Vertex *curr, Vertex* other, std::array<float, 3> &springD
     vec3 xij = curr->position - other->position;
     vec3 xij_dir = normalize(xij);
     vec3 vij = curr->velocity - other->velocity;
-    // DBG(length(xij) - springData[0])
-    float springForce = -springData[0] * (length(xij) - springData[1]);
+
+    if(length(vij) < 0.01f) vij = vec3(0.0f);
+
+    std::cout << length(xij) - springData[1] << std::endl;
+    float springForce = -1.0f * springData[0] * (length(xij) - springData[1]);
+
     float dampForce = -springData[2] * (dot(vij, xij_dir));
+    if(std::abs(length(xij)-springData[1]) < 0.01f) springForce = 0.0f;
+
     return (springForce + dampForce) * xij_dir;
 }
 
-void Vertex::updateGenCords(float dt) {
+void Vertex::updateCurrentForces() {
     // if(isFixed) DBG(position)
     if(isFixed) return;
     assert(mass != 0);
@@ -190,10 +196,15 @@ void Vertex::updateGenCords(float dt) {
     for(auto &other: bendingSprings) {
         totalForce += getForce(this, other.first, other.second);
     }
-    // DBG(totalForce)
-    velocity = velocity + (totalForce / mass) * dt;
-    // DBG(velocity * dt)
+    DBG(totalForce - const_force)
+    currentForce = totalForce;
+    DBG(currentForce)
+}
+
+void Vertex::updateGenCords(float dt) {
+    if(isFixed) return;
+    assert(mass != 0);
+    velocity = velocity + (currentForce / mass) * dt;
     position = position + velocity * dt;
-    // DBG((totalForce / mass) * dt)
-    // DBG(velocity * dt)
+    DBG(position)
 }

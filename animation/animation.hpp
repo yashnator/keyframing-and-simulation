@@ -88,6 +88,7 @@ class Vertex
     // glm::vec3 texCoords;
     std::vector<int> boneIDs;
     std::vector<float> weights;
+    vec3 currentForce = vec3(0.0f);
     // vertex(glm::vec3 __position, glm::vec3 __normal, glm::vec3 texCoords, vector<int> boneIDs, vector<float> weights);
 
     // Spring mass related things
@@ -103,7 +104,8 @@ class Vertex
 
     void attachToBone(int&& boneID) noexcept;
     vec3 getForce(Vertex *, Vertex *, std::array<float, 3> &);
-    void updateGenCords(float dt);
+    void updateCurrentForces();
+    void updateGenCords(float t);
     void updateNormal();
     void addStructural(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
     void addShear(Vertex *other, float ks = 0.0f, float lo = 0.0f, float kd = 0.0f);
