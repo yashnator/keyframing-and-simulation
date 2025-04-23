@@ -1,10 +1,102 @@
 #include "animation.hpp"
 
+// ------------------- Shape METHODS --------------- //
+
+Sphere::Sphere(vec3 __center, float __r): center(__center), r(__r)
+{ }
+
+Plane::Plane(vec3 __planePt, vec3 __normal): planePt(__planePt), normal(__normal)
+{ }
+
+float IdShape::phiSurface(vec3 &pointPrev, vec3 &pointCurr) {
+    return 0.0f;
+}
+
+void IdShape::updatePosition(mat4 &transform) { }
+
+vec3 IdShape::collisionPt(vec3 &pointPrev, vec3 &pointCurr) {
+    return vec3(0.0f);
+}
+
+vec3 IdShape::getNormal(vec3 &pt) {
+    return vec3(0.0f);
+}
+
+float Sphere::phiSurface(vec3 &pointPrev, vec3 &pointCurr) {
+    // DBG(center)
+    // if(distance(center, pointPrev) < r) return -f;
+    return distance(center, pointCurr) - r;
+}
+
+void Sphere::updatePosition(mat4 &transform) {
+    center = vec3(transform * vec4(center, 1.0f));
+}
+
+vec3 Sphere::collisionPt(vec3 &pointPrev, vec3 &pointCurr) {
+    // r = prev + t * (curr - prev)
+    vec3 d = pointCurr - pointPrev;
+    glm::vec3 object_space_c = center;
+    float qa = glm::dot(d, d);
+    float qb = glm::dot(2.0f * d, pointPrev - object_space_c);
+    float qc = glm::dot(pointPrev - object_space_c, pointPrev - object_space_c) - r * r;
+
+    float discriminant = qb * qb - 4 * qa * qc;
+    if (discriminant < 0) {
+        std::cout << phiSurface(pointPrev, pointCurr) << std::endl;
+        std::cout << phiSurface(pointPrev, pointPrev) << std::endl;
+        std::cout << discriminant << std::endl;
+        DBG(pointPrev)
+        DBG(pointCurr)
+        return pointPrev;
+        assert(0 == 1);
+    }
+
+    float t1 = (-qb - sqrt(discriminant)) / (2 * qa);
+    float t2 = (-qb + sqrt(discriminant)) / (2 * qa);
+
+    if(t1>t2) std::swap(t1, t2);
+    if(t1>0)
+    {
+        return pointPrev + t1 * (d);
+    }
+    if(t2>0)
+    {
+        // assert(0 == 1);
+        return pointPrev + t2 * (d);
+    }
+    assert(0 == 1);
+}
+
+vec3 Sphere::getNormal(vec3 &pt) {
+    return normalize(pt - center);
+}
+
+float Plane::phiSurface(vec3 &pointPrev, vec3  &pointCurr) {
+    if(dot(pointPrev - planePt, normal) * dot(pointCurr - planePt, normal) >= 0.0f) {
+        return 0.0f;
+    }
+    return -abs(dot(pointCurr - planePt, normal));
+}
+
+void Plane::updatePosition(mat4 &transform) {
+    planePt = vec3(transform * vec4(planePt, 1.0f));
+    normal = vec3(inverseTranspose(transform) * vec4(normal, 0.0f));
+    normal = normalize(normal);
+}
+
+vec3 Plane::collisionPt(vec3 &pointPrev, vec3 &pointCurr) {
+   return vec3(0.0f);
+}
+
+vec3 Plane::getNormal(vec3 &pt) {
+    return normal;
+}
+
 // ------------------- BONE METHODS --------------- //
 
 // ctors
 
-Bone::Bone(std::string __boneName, Bone* __parent, glm::mat4 __offsetMatrix, glm::mat4 __localTransform):
+Bone::Bone(std::string __boneName, Bone* __parent, std::unique_ptr<Mesh> __mesh, std::unique_ptr<Shape> __shape, glm::mat4 __offsetMatrix, glm::mat4 __localTransform) :
     boneName(__boneName),
     offsetMatrix(__offsetMatrix),
     offsetMatrixIT(inverseTranspose(__offsetMatrix)),
@@ -12,15 +104,15 @@ Bone::Bone(std::string __boneName, Bone* __parent, glm::mat4 __offsetMatrix, glm
     globalTransform(mat4(1.0f)),
     parent(__parent),
     vertTransform(mat4(1.0f)),
-    vertTransformIT(mat4(1.0f))
+    vertTransformIT(mat4(1.0f)),
+    shape(std::move(__shape)),
+    mesh(std::move(__mesh)),
+    isFixed(false),
+    mu(0.0f),
+    epsilon(1.0f)
 {
-    // if(parent)
-        // offsetMatrix = parent->offsetMatrix * __offsetMatrix;
     vertTransform = offsetMatrix;
     vertTransformIT = inverseTranspose(vertTransform);
-    // if(parent) {
-    //     parent->children.push_back(this);
-    // }
 }
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
@@ -38,13 +130,6 @@ Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent 
 
 void Bone::updateBone(const glm::mat4& transform) {
     localTransform = transform;
-    // if (parent)
-        // globalTransform = parent->globalTransform * offsetMatrix * localTransform;
-    // else
-        // globalTransform = offsetMatrix * localTransform;
-    // vertTransform = offsetMatrix * transform * inverse(offsetMatrix);
-    // vertTransform = globalTransform;
-    // vertTransformIT = inverseTranspose(vertTransform);
 }
 
 void Bone::updateBone(const glm::vec3& pos, const glm::quat& rot) {
@@ -65,6 +150,22 @@ void Bone::getMeshAttribs(Mesh &mesh) {
                             renderNormals);
 }
 
+void Bone::updateMesh() {
+    if(mesh) {
+        for(int i = 0; i < renderVertices.size(); ++i) {
+            mesh->vertices[i].position = renderVertices[i];
+        }
+        // mesh->vertices = renderVertices;
+        mesh->getMeshAttribs(totalVertices,
+                            numberOfTriangles,
+                            numberOfEdges,
+                            renderVertices,
+                            renderTriangles,
+                            renderEdges,
+                            renderNormals);
+    }
+}
+
 void Bone::updateBindPose(const glm::mat4& transform) {
     glm::mat4 invT = glm::inverseTranspose(transform);
     offsetMatrix = offsetMatrix * transform;
@@ -79,7 +180,7 @@ void Bone::updateBindPose(const glm::mat4& transform) {
     vertTransformIT = inverseTranspose(vertTransform);
 }
 
-void Bone::updateInit(const glm::mat4 &transform) {
+void Bone::updateInit(glm::mat4 &&transform) {
     glm::mat4 invT = glm::inverseTranspose(transform);
     for(auto &vert: renderVertices) {
         vert = glm::vec3(transform * glm::vec4(vert, 1.0f));
@@ -87,6 +188,7 @@ void Bone::updateInit(const glm::mat4 &transform) {
     for(auto &nrml: renderNormals) {
         nrml = glm::vec3(invT * glm::vec4(nrml, 0.0f));
     }
+    if(shape) shape->updatePosition(transform);
 }
 
 void Bone::updateAll() {
@@ -170,19 +272,19 @@ vec3 Vertex::getForce(Vertex *curr, Vertex* other, std::array<float, 3> &springD
     vec3 xij_dir = normalize(xij);
     vec3 vij = curr->velocity - other->velocity;
 
-    if(length(vij) < 0.01f) vij = vec3(0.0f);
+    // if(length(vij) < 0.01f) vij = vec3(0.0f);
 
     // std::cout << length(xij) - springData[1] << std::endl;
     float springForce = -1.0f * springData[0] * (length(xij) - springData[1]);
 
     float dampForce = -springData[2] * (dot(vij, xij_dir));
-    if(std::abs(length(xij)-springData[1]) < 0.01f) springForce = 0.0f;
+    // if(std::abs(length(xij)-springData[1]) < 0.01f) springForce = 0.0f;
 
     return (springForce + dampForce) * xij_dir;
 }
 
 void Vertex::updateCurrentForces() {
-    // if(isFixed) DBG(position)
+    // DBG(position)
     if(isFixed) return;
     assert(mass != 0);
     vec3 totalForce = mass * g;
@@ -197,13 +299,31 @@ void Vertex::updateCurrentForces() {
         totalForce += getForce(this, other.first, other.second);
     }
     currentForce = totalForce;
-    // DBG(currentForce)
 }
 
-void Vertex::updateGenCords(float dt) {
+void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
     if(isFixed) return;
+    // std::cout << "here" << std::endl;
     assert(mass != 0);
-    velocity = velocity + (currentForce / mass) * dt;
-    position = position + velocity * dt;
+    vec3 velNext = velocity + (currentForce / mass) * dt;
+    vec3 posNext = position + velNext * dt;
+    for(auto &bone: bones) {
+        if(bone.shape == nullptr) continue;
+        float phi = bone.shape->phiSurface(position, posNext);
+        if(phi < 0.0f) {
+            vec3 collisionPt = bone.shape->collisionPt(position, posNext);
+            float t1 = length(collisionPt - position) / length(velocity);
+            float t2 = dt - t1;
+            vec3 n = bone.shape->getNormal(collisionPt);
+            vec3 vn = dot(velocity, n) * n;
+            vec3 vt = velocity - vn;
+            if(dot(vn, n) < 0.0f)  {
+                velNext = vt - vn;
+                posNext = collisionPt + t2 * velNext;
+            }
+        }
+    }
+    velocity = velNext;
+    position = posNext;
     // DBG(position)
 }

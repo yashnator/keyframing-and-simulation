@@ -14,6 +14,7 @@
 #include <SDL2/SDL.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "halfedge.hpp"
 #include "shapes.hpp"
@@ -24,6 +25,46 @@ using namespace glm;
 #define DBG(x) std::cout << #x << " " << to_string(x) << std::endl;
 
 const vec3 g(0.0f, -9.81f, 0.0f);
+
+class Shape
+{
+    public:
+    virtual ~Shape() = default;
+    virtual float phiSurface(vec3 &pointPrev, vec3 &pointCurr) = 0;
+    virtual void updatePosition(mat4 &transform) = 0;
+    virtual vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr) = 0;
+    virtual vec3 getNormal(vec3 &pt) = 0;
+};
+
+class IdShape: public Shape {
+    float phiSurface(vec3 &pointCurr, vec3 &pointNext);
+    void updatePosition(mat4 &transform);
+    vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
+    vec3 getNormal(vec3 &pt);
+};
+
+class Sphere: public Shape {
+    public:
+    vec3 center;
+    float r;
+    Sphere(vec3 center, float r);
+    float phiSurface(vec3 &pointPrev, vec3 &pointCurr);
+    // vec3 getNormal()
+    void updatePosition(mat4 &transform);
+    vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
+    vec3 getNormal(vec3 &pt);
+};
+
+class Plane: public Shape {
+    public:
+    vec3 planePt;
+    vec3 normal;
+    Plane(vec3 planePt, vec3 normal);
+    float phiSurface(vec3 &pointPrev, vec3 &pointCurr);
+    void updatePosition(mat4 &transform);
+    vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
+    vec3 getNormal(vec3 &pt);
+};
 
 class Bone
 {
@@ -45,6 +86,7 @@ class Bone
     Bone* parent;
     std::vector<Bone*> children;
 
+    bool isFixed;
 
     int totalVertices;
     int numberOfTriangles;
@@ -55,9 +97,21 @@ class Bone
     std::vector<vec3> renderNormals;
     std::pair<int, int> globalRange;
 
+    // Associated shapes
+    std::unique_ptr<Shape> shape;
+
+    // Associated Mesh
+    std::unique_ptr<Mesh> mesh;
+
+    // Collision constants
+    float mu;
+    float epsilon;
+
     // public:
     Bone(std::string __boneName,
          Bone* __parent = nullptr,
+         std::unique_ptr<Mesh> __mesh = nullptr,
+         std::unique_ptr<Shape> __shape = nullptr,
          glm::mat4 __offsetMatrix = mat4(1.0f),
          glm::mat4 __localTransform = mat4(1.0f));
     Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
@@ -67,9 +121,10 @@ class Bone
     glm::mat4 getVertTransform() const;
 
     void updateBindPose(const glm::mat4& transform);
-    void updateInit(const glm::mat4& transform);
+    void updateInit(glm::mat4 &&transform);
 
     void getMeshAttribs(Mesh &mesh);
+    void updateMesh();
     void updateAll();
 };
 
@@ -105,10 +160,10 @@ class Vertex
     void attachToBone(int&& boneID) noexcept;
     vec3 getForce(Vertex *, Vertex *, std::array<float, 3> &);
     void updateCurrentForces();
-    void updateGenCords(float t);
+    void updateGenCords(std::vector<Bone> &bones, float t);
     void updateNormal();
     void addStructural(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
-    void addShear(Vertex *other, float ks = 0.0f, float lo = 0.0f, float kd = 0.0f);
+    void addShear(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
     void addBend(Vertex *other, float ks = 0.0f, float l0 = 0.0f, float kd = 0.0f);
 };
 

@@ -18,6 +18,7 @@
 #include <random>
 #include <sstream>
 
+class Shape;
 class Bone;
 class Vertex;
 class HalfEdge;

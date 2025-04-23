@@ -25,9 +25,6 @@ CameraControl camCtl;
 
 std::map<std::string, int> boneIdx;
 
-int m = 25, n = 25;
-Mesh cloth = unitSquare(n,m);
-
 void setVertData(vec3 &vertData, vec3& normalData, Bone &bone, Vertex &v) {
     vertData = vec3(bone.vertTransform * vec4(v.position, 1.0f));
     normalData = vec3(bone.vertTransformIT * vec4(v.normal, 0.0f));
@@ -62,6 +59,7 @@ void initializeBones() {
            normals[nptr] = p;
            ++nptr;
            vertices.emplace_back(Vertex(pos[nptr - 1], normals[nptr - 1], {bptr}));
+           vertices.back().isFixed = boneArray[bptr].isFixed;
        }
        for(auto &p: bone.renderEdges) {
            edges[eptr] = p + eoff;
@@ -84,19 +82,30 @@ void initializeBones() {
 void initializeScene() {
     boneArray.reserve(100);
     // Torso is the root of all bones
-    boneArray.emplace_back(Bone("torso"));
-    boneArray.back().getMeshAttribs(cloth);
+    int m = 25, n = 25;
+    int p = 10, q = 10;
+
+    auto cloth = std::unique_ptr<Mesh>(new Mesh(std::move(unitSquare(n, m))));
+    auto ball = std::unique_ptr<Mesh>(new Mesh(std::move(unitSphere(p, q))));
+    auto sphInternal = std::unique_ptr<Shape>(new Sphere(vec3(0.0f), 0.51f));
+    boneArray.emplace_back(Bone("Cloth", nullptr, std::move(cloth)));
+    boneArray.back().updateMesh();
     boneArray.back().updateInit(translate(mat4(1.0f), vec3(-0.5f, -0.5f, 0.0f)));
     boneArray.back().updateInit(scale(mat4(1.0f), vec3(3.0f, 3.0f, 3.0f)));
     boneArray.back().updateInit(rotate(mat4(1.0f), radians(-90.0f), vec3(1.0f, 0.0f, 0.0f)));
+
+    // // Ball
+    boneArray.emplace_back(Bone("Ball", nullptr, std::move(ball), std::move(sphInternal)));
+    boneArray.back().updateMesh();
+    // // boneArray.back().shape = Sphere(vec3(0.0f, 0.0f, 0.0f), 1.0f);
+    boneArray.back().updateInit(scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)));
+    boneArray.back().updateInit(translate(mat4(1.0f), vec3(0.0f, -2.5f, -1.5f)));
+    boneArray.back().isFixed = true;
 
 	object = r.createObject();
     initializeBones();
     for(int i = 0; i < nv; ++i) {
         vertices[i].mass = 0.1f;
-        // if(i > 1) vertices[i].isFixed = true;
-        // DBG(vertices[i].position)
-        // std::cout << vertices[i].isFixed << std::endl;
     }
     float ks = 5.0f * 1e0;
     float kd = 1.0f;
@@ -118,8 +127,9 @@ void initializeScene() {
         //second closest
         if(c2>1) vertices[i].addShear(&vertices[i-2], 60.0f, length(vertices[i].position - vertices[i-2].position), kd);
         if(c1<m-1) vertices[i].addShear(&vertices[i+2*(n+1)], 60.0f, length(vertices[i].position - vertices[i+2*(n+1)].position), kd);
-        if(c1==m) vertices[i].isFixed = true;
-        // if(c1==m ) vertices[i].isFixed = true;
+        if(c1==m) vertices[i].isFixed |= true;
+        if(c1==m ) vertices[i].isFixed = true;
+        vertices[i].isFixed |= boneArray[vertices[i].boneIDs[0]].isFixed;
     }
 }
 
@@ -128,25 +138,30 @@ void updateScene(float t) {
     // const float dt = 0.1f;
     t = 0.0005f;
     for(int i=0;i<nv;i++) vertices[i].updateCurrentForces();
+    int ptr = 0;
     for(int i=0;i<nv;i++)
     {
         vertices[i].updateGenCords(boneArray, t);
-        cloth.vertices[i].position = vertices[i].position;
+        // cloth.vertices[i].position = vertices[i].position;
+        boneArray[vertices[i].boneIDs[0]].renderVertices[ptr] = vertices[i].position;
+        ++ptr;
+        ptr = ptr % (boneArray[vertices[i].boneIDs[0]].renderVertices.size());
     }
-    boneArray[0].getMeshAttribs(cloth);
+    for(auto &bone: boneArray) {
+        bone.updateMesh();
+    }
+    ptr = 0;
     for(int i=0;i<nv;i++)
     {
-        vertices[i].normal = boneArray[0].renderNormals[i];
+        vertices[i].position = boneArray[vertices[i].boneIDs[0]].renderVertices[ptr];
+        vertices[i].normal = boneArray[vertices[i].boneIDs[0]].renderNormals[ptr];
+        ++ptr;
+        ptr = ptr % (boneArray[vertices[i].boneIDs[0]].renderVertices.size());
     }
     vec3 verticesData[nv], normalsData[nv];
     for(int i = 0; i < nv; ++i) {
         verticesData[i] = vertices[i].position;
         normalsData[i] = vertices[i].normal;
-        // if(i == 2) DBG(verticesData[i])
-        if(!vertices[i].isFixed) {
-            // std::cout << i << std::endl;
-            // DBG(vertices[i].position)
-        }
     }
     r.updateVertexAttribs(vertexBuf, nv, verticesData);
 	r.updateVertexAttribs(normalBuf, nv, normalsData);

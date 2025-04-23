@@ -22,3 +22,7 @@ target_link_libraries(example2 col781)
 add_executable(spring_example executables/spring_example.cpp)
 target_include_directories(spring_example PUBLIC src)
 target_link_libraries(spring_example col781)
+
+add_executable(collision_example executables/collision_example.cpp)
+target_include_directories(collision_example PUBLIC src)
+target_link_libraries(collision_example col781)
