@@ -2,7 +2,7 @@
 
 // ------------------- Shape METHODS --------------- //
 
-Sphere::Sphere(vec3 __center, float __r): center(__center), r(__r)
+Sphere::Sphere(vec3 __center, float __r, vec3 __omega): center(__center), r(__r), omega(__omega)
 { }
 
 Plane::Plane(vec3 __planePt, vec3 __normal): planePt(__planePt), normal(__normal)
@@ -21,6 +21,14 @@ vec3 IdShape::collisionPt(vec3 &pointPrev, vec3 &pointCurr) {
 vec3 IdShape::getNormal(vec3 &pt) {
     return vec3(0.0f);
 }
+
+vec3 IdShape::getVelocityAt(vec3 &pt) {
+    return vec3(0.0f);
+}
+
+void IdShape::setOmega(vec3 __omega) { }
+
+void IdShape::rotateCord(vec3 &pt, float dt) { }
 
 float Sphere::phiSurface(vec3 &pointPrev, vec3 &pointCurr) {
     // DBG(center)
@@ -71,6 +79,21 @@ vec3 Sphere::getNormal(vec3 &pt) {
     return normalize(pt - center);
 }
 
+vec3 Sphere::getVelocityAt(vec3 &pt) {
+    return cross(omega, pt - center);
+}
+
+void Sphere::setOmega(vec3 __omega) {
+    omega = __omega;
+}
+
+void Sphere::rotateCord(vec3 &pt, float dt) {
+    vec3 rel_pt = pt - center;
+    float angle = length(omega) * dt;
+    rel_pt = rotate(mat4(1.0f), angle, normalize(omega)) * vec4(rel_pt, 1.0f);
+    pt = center + rel_pt;
+}
+
 float Plane::phiSurface(vec3 &pointPrev, vec3  &pointCurr) {
     if(dot(pointPrev - planePt, normal) * dot(pointCurr - planePt, normal) >= 0.0f) {
         return 0.0f;
@@ -92,11 +115,19 @@ vec3 Plane::getNormal(vec3 &pt) {
     return normalize(normal);
 }
 
+vec3 Plane::getVelocityAt(vec3 &pt) {
+    return vec3(0.0f);
+}
+
+void Plane::setOmega(vec3 __omega) { }
+
+void Plane::rotateCord(vec3 &pt, float dt) { }
+
 // ------------------- BONE METHODS --------------- //
 
 // ctors
 
-Bone::Bone(std::string __boneName, Bone* __parent, std::unique_ptr<Mesh> __mesh, std::unique_ptr<Shape> __shape, glm::mat4 __offsetMatrix, glm::mat4 __localTransform) :
+Bone::Bone(std::string __boneName, Bone* __parent, std::unique_ptr<Mesh> __mesh, std::unique_ptr<Shape> __shape, glm::mat4 __offsetMatrix, glm::mat4 __localTransform, vec3 __velocity) :
     boneName(__boneName),
     offsetMatrix(__offsetMatrix),
     offsetMatrixIT(inverseTranspose(__offsetMatrix)),
@@ -109,10 +140,12 @@ Bone::Bone(std::string __boneName, Bone* __parent, std::unique_ptr<Mesh> __mesh,
     mesh(std::move(__mesh)),
     isFixed(false),
     mu(0.0f),
-    epsilon(1.0f)
+    epsilon(1.0f),
+    velocity(__velocity)
 {
     vertTransform = offsetMatrix;
     vertTransformIT = inverseTranspose(vertTransform);
+    omega = vec3(0.0f);
 }
 
 Bone::Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent = nullptr):
@@ -203,6 +236,10 @@ void Bone::updateAll() {
     for(auto &child: children) {
         child->updateAll();
     }
+}
+
+void Bone::setOmega(vec3 __omega) {
+    shape->setOmega(__omega);
 }
 
 // ------------------ VERTEX METHODS ------------- //
@@ -302,11 +339,28 @@ void Vertex::updateCurrentForces() {
 }
 
 void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
-    if(isFixed) return;
+    if(bones[boneIDs.front()].shape) {
+        velocity -= bones[boneIDs.front()].shape->getVelocityAt(position);
+        bones[boneIDs.front()].shape->rotateCord(position, dt);
+        velocity += bones[boneIDs.front()].shape->getVelocityAt(position);
+           // position = posNext;
+    }
+    if(isFixed) {
+       return;
+    }
     // std::cout << "here" << std::endl;
     assert(mass != 0);
     vec3 velNext = velocity + (currentForce / mass) * dt;
+    // if(bones[boneIDs.front()].shape) {
+    //     velNext -= bones[boneIDs.front()].shape->getVelocityAt(position);
+    // }
+    // velNext -= angular_del_v;
     vec3 posNext = position + velNext * dt;
+    // if(bones[boneIDs.front()].shape) {
+    //     DBG(bones[boneIDs.front()].shape->getVelocityAt(posNext))
+    //     velNext += bones[boneIDs.front()].shape->getVelocityAt(posNext);
+    // }
+    // velNext += bones[boneIDs.front()].shape->getVelocityAt(posNext);
     for(auto &bone: bones) {
         if(bone.shape == nullptr) continue;
         float phi = bone.shape->phiSurface(position, posNext);
@@ -317,7 +371,25 @@ void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
             float t1 = phi / length(vn);
             float t2 = dt - t1;
             posNext = position + t1 * velNext;
-            velNext = vt - vn;
+            // posNext is the point of collision
+            // Now update velocity
+            // vec3 v_sphere = bone.velocity + bone.shape->getVelocityAt(posNext);
+            vec3 v_sphere = bone.velocity + bone.shape->getVelocityAt(posNext);
+            vec3 v_rel = velNext - v_sphere;
+            vec3 v_reln = dot(v_rel, n) * n;
+            vec3 v_relt = v_rel - v_reln;
+            // DBG(v_sphere)
+
+            velNext = -bone.epsilon * v_reln;
+            vec3 impulse = velNext - v_reln;
+            float friction_mag = clamp((bone.mu * length(impulse)) / length(v_relt), 0.0f, 1.0f);
+            v_relt = (1 - friction_mag) * v_relt;
+            velNext += v_relt + v_sphere;
+
+            // DBG(velocity)
+            // DBG(velNext)
+
+            //
             posNext = posNext + velNext * t2;
             // vec3 collisionPt = bone.shape->collisionPt(position, posNext);
             // float t1 = length(collisionPt - position) / length(velocity);

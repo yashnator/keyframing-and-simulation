@@ -34,6 +34,9 @@ class Shape
     virtual void updatePosition(mat4 &transform) = 0;
     virtual vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr) = 0;
     virtual vec3 getNormal(vec3 &pt) = 0;
+    virtual vec3 getVelocityAt(vec3 &pt) = 0;
+    virtual void setOmega(vec3 __omega) = 0;
+    virtual void rotateCord(vec3 &cord, float dt) = 0;
 };
 
 class IdShape: public Shape {
@@ -41,18 +44,25 @@ class IdShape: public Shape {
     void updatePosition(mat4 &transform);
     vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
     vec3 getNormal(vec3 &pt);
+    vec3 getVelocityAt(vec3 &pt);
+    void setOmega(vec3 __omega);
+    void rotateCord(vec3 &cord, float dt);
 };
 
 class Sphere: public Shape {
     public:
     vec3 center;
     float r;
-    Sphere(vec3 center, float r);
+    vec3 omega;
+    Sphere(vec3 center, float r, vec3 omega = vec3(0.0f));
     float phiSurface(vec3 &pointPrev, vec3 &pointCurr);
     // vec3 getNormal()
     void updatePosition(mat4 &transform);
     vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
     vec3 getNormal(vec3 &pt);
+    vec3 getVelocityAt(vec3 &pt);
+    void setOmega(vec3 __omega);
+    void rotateCord(vec3 &cord, float dt);
 };
 
 class Plane: public Shape {
@@ -64,6 +74,9 @@ class Plane: public Shape {
     void updatePosition(mat4 &transform);
     vec3 collisionPt(vec3 &pointPrev, vec3 &pointCurr);
     vec3 getNormal(vec3 &pt);
+    vec3 getVelocityAt(vec3 &pt);
+    void setOmega(vec3 __omega);
+    void rotateCord(vec3 &cord, float dt);
 };
 
 class Bone
@@ -106,6 +119,8 @@ class Bone
     // Collision constants
     float mu;
     float epsilon;
+    vec3 velocity;
+    vec3 omega;
 
     // public:
     Bone(std::string __boneName,
@@ -113,7 +128,8 @@ class Bone
          std::unique_ptr<Mesh> __mesh = nullptr,
          std::unique_ptr<Shape> __shape = nullptr,
          glm::mat4 __offsetMatrix = mat4(1.0f),
-         glm::mat4 __localTransform = mat4(1.0f));
+         glm::mat4 __localTransform = mat4(1.0f),
+         vec3 __velocity = vec3(0.0f));
     Bone(glm::mat4 __offsetMatrix, glm::mat4 __localTransform, Bone* __parent);
 
     void updateBone(const glm::mat4& transform);
@@ -126,6 +142,8 @@ class Bone
     void getMeshAttribs(Mesh &mesh);
     void updateMesh();
     void updateAll();
+
+    void setOmega(vec3 __omega = vec3(0.0f));
 };
 
 // We go from bone's space to world space by multiplying with offset matrix
