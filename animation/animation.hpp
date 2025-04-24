@@ -37,6 +37,7 @@ class Shape
     virtual vec3 getVelocityAt(vec3 &pt) = 0;
     virtual void setOmega(vec3 __omega) = 0;
     virtual void rotateCord(vec3 &cord, float dt) = 0;
+    virtual void moveShape(vec3 disp) = 0;
 };
 
 class IdShape: public Shape {
@@ -47,6 +48,7 @@ class IdShape: public Shape {
     vec3 getVelocityAt(vec3 &pt);
     void setOmega(vec3 __omega);
     void rotateCord(vec3 &cord, float dt);
+    void moveShape(vec3 disp);
 };
 
 class Sphere: public Shape {
@@ -63,6 +65,7 @@ class Sphere: public Shape {
     vec3 getVelocityAt(vec3 &pt);
     void setOmega(vec3 __omega);
     void rotateCord(vec3 &cord, float dt);
+    void moveShape(vec3 disp);
 };
 
 class Plane: public Shape {
@@ -77,6 +80,7 @@ class Plane: public Shape {
     vec3 getVelocityAt(vec3 &pt);
     void setOmega(vec3 __omega);
     void rotateCord(vec3 &cord, float dt);
+    void moveShape(vec3 disp);
 };
 
 class Bone

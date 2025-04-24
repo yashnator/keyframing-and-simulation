@@ -30,6 +30,8 @@ void IdShape::setOmega(vec3 __omega) { }
 
 void IdShape::rotateCord(vec3 &pt, float dt) { }
 
+void IdShape::moveShape(vec3 disp) { }
+
 float Sphere::phiSurface(vec3 &pointPrev, vec3 &pointCurr) {
     // DBG(center)
     // if(distance(center, pointPrev) < r) return -f;
@@ -90,8 +92,13 @@ void Sphere::setOmega(vec3 __omega) {
 void Sphere::rotateCord(vec3 &pt, float dt) {
     vec3 rel_pt = pt - center;
     float angle = length(omega) * dt;
+    if(angle == 0.0f) return;
     rel_pt = rotate(mat4(1.0f), angle, normalize(omega)) * vec4(rel_pt, 1.0f);
     pt = center + rel_pt;
+}
+
+void Sphere::moveShape(vec3 disp) {
+    center = center + disp;
 }
 
 float Plane::phiSurface(vec3 &pointPrev, vec3  &pointCurr) {
@@ -122,6 +129,10 @@ vec3 Plane::getVelocityAt(vec3 &pt) {
 void Plane::setOmega(vec3 __omega) { }
 
 void Plane::rotateCord(vec3 &pt, float dt) { }
+
+void Plane::moveShape(vec3 disp) {
+    planePt = planePt + disp;
+}
 
 // ------------------- BONE METHODS --------------- //
 
@@ -343,7 +354,8 @@ void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
         velocity -= bones[boneIDs.front()].shape->getVelocityAt(position);
         bones[boneIDs.front()].shape->rotateCord(position, dt);
         velocity += bones[boneIDs.front()].shape->getVelocityAt(position);
-           // position = posNext;
+        position = position + bones[boneIDs.front()].velocity * dt;
+        // bones[boneIDs.front()].shape->moveShape(bones[boneIDs.front()].velocity * dt);
     }
     if(isFixed) {
        return;
@@ -364,6 +376,7 @@ void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
     for(auto &bone: bones) {
         if(bone.shape == nullptr) continue;
         float phi = bone.shape->phiSurface(position, posNext);
+        // std::cout << phi << std::endl;
         if(phi < 0.0f) {
             vec3 n = bone.shape->getNormal(position);
             vec3 vn = dot(velNext, n) * n;
@@ -376,15 +389,17 @@ void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
             // vec3 v_sphere = bone.velocity + bone.shape->getVelocityAt(posNext);
             vec3 v_sphere = bone.velocity + bone.shape->getVelocityAt(posNext);
             vec3 v_rel = velNext - v_sphere;
-            vec3 v_reln = dot(v_rel, n) * n;
-            vec3 v_relt = v_rel - v_reln;
-            // DBG(v_sphere)
+            if(dot(v_rel, n) < 0.0f) {
+                vec3 v_reln = dot(v_rel, n) * n;
+                vec3 v_relt = v_rel - v_reln;
+                // DBG(v_sphere)
 
-            velNext = -bone.epsilon * v_reln;
-            vec3 impulse = velNext - v_reln;
-            float friction_mag = clamp((bone.mu * length(impulse)) / length(v_relt), 0.0f, 1.0f);
-            v_relt = (1 - friction_mag) * v_relt;
-            velNext += v_relt + v_sphere;
+                velNext = -bone.epsilon * v_reln;
+                vec3 impulse = velNext - v_reln;
+                float friction_mag = clamp((bone.mu * length(impulse)) / length(v_relt), 0.0f, 1.0f);
+                v_relt = (1 - friction_mag) * v_relt;
+                velNext += v_relt + v_sphere;
+            }
 
             // DBG(velocity)
             // DBG(velNext)
