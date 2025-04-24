@@ -99,7 +99,7 @@ void initializeScene() {
     boneArray.back().updateMesh();
     // // boneArray.back().shape = Sphere(vec3(0.0f, 0.0f, 0.0f), 1.0f);
     boneArray.back().updateInit(scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)));
-    boneArray.back().updateInit(translate(mat4(1.0f), vec3(0.0f, -2.5f, -1.5f)));
+    boneArray.back().updateInit(translate(mat4(1.0f), vec3(0.0f, -1.5f, -2.5f)));
     boneArray.back().isFixed = true;
 
 	object = r.createObject();

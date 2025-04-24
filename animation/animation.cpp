@@ -89,7 +89,7 @@ vec3 Plane::collisionPt(vec3 &pointPrev, vec3 &pointCurr) {
 }
 
 vec3 Plane::getNormal(vec3 &pt) {
-    return normal;
+    return normalize(normal);
 }
 
 // ------------------- BONE METHODS --------------- //
@@ -311,16 +311,21 @@ void Vertex::updateGenCords(std::vector<Bone> &bones, float dt) {
         if(bone.shape == nullptr) continue;
         float phi = bone.shape->phiSurface(position, posNext);
         if(phi < 0.0f) {
-            vec3 collisionPt = bone.shape->collisionPt(position, posNext);
-            float t1 = length(collisionPt - position) / length(velocity);
+            vec3 n = bone.shape->getNormal(position);
+            vec3 vn = dot(velNext, n) * n;
+            vec3 vt = velNext - vn;
+            float t1 = phi / length(vn);
             float t2 = dt - t1;
-            vec3 n = bone.shape->getNormal(collisionPt);
-            vec3 vn = dot(velocity, n) * n;
-            vec3 vt = velocity - vn;
-            if(dot(vn, n) < 0.0f)  {
-                velNext = vt - vn;
-                posNext = collisionPt + t2 * velNext;
-            }
+            posNext = position + t1 * velNext;
+            velNext = vt - vn;
+            posNext = posNext + velNext * t2;
+            // vec3 collisionPt = bone.shape->collisionPt(position, posNext);
+            // float t1 = length(collisionPt - position) / length(velocity);
+            // float t2 = dt - t1;
+            // if(dot(vn, n) < 0.0f)  {
+            //     velNext = vt - vn;
+            //     posNext = collisionPt + t2 * velNext;
+            // }
         }
     }
     velocity = velNext;
