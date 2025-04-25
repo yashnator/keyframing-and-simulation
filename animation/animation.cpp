@@ -152,7 +152,10 @@ Bone::Bone(std::string __boneName, Bone* __parent, std::unique_ptr<Mesh> __mesh,
     isFixed(false),
     mu(0.0f),
     epsilon(1.0f),
-    velocity(__velocity)
+    velocity(__velocity),
+    checkSelfCollisions(false),
+    delta_x(0.0f),
+    n(-1), m(-1)
 {
     vertTransform = offsetMatrix;
     vertTransformIT = inverseTranspose(vertTransform);
@@ -251,6 +254,47 @@ void Bone::updateAll() {
 
 void Bone::setOmega(vec3 __omega) {
     shape->setOmega(__omega);
+}
+
+void Bone::updateGridAndApplyForces(std::vector<Vertex> &vertices, float dt, int boneIndex) {
+    if(not checkSelfCollisions) return;
+    assert(delta_x != 0.0f);
+    int vertIndex = 0;
+    for(auto &vert: vertices) {
+        if(vert.boneIDs.front() != boneIndex) continue;
+        std::array<int, 3> pos{(int)std::floor(vert.position.x / delta_x),
+                               (int)std::floor(vert.position.y / delta_x),
+                               (int)std::floor(vert.position.z / delta_x)};
+        grid[pos].emplace_back(vertIndex);
+        ++vertIndex;
+    }
+    vertIndex = 0;
+    for(auto &vert: vertices) {
+        if(vert.boneIDs.front() != boneIndex) continue;
+        std::array<int, 3> pos{(int)std::floor(vert.position.x / delta_x),
+                               (int)std::floor(vert.position.y / delta_x),
+                               (int)std::floor(vert.position.z / delta_x)};
+        for(int x = -1; x <= 1; ++x) {
+            for(int y = -1; y <= 1; ++y) {
+                for(int z = -1; z <= 1; ++z){
+                    std::array<int, 3> searchSpace{pos[0] + x, pos[1] + y, pos[2] + z};
+                    if(grid.find(searchSpace) == grid.end()) continue;
+                    for(auto other: grid[searchSpace]) {
+                        // Assume uniform grid of n + 1 x m + 1
+                        if(abs(vertIndex - other) <= 1) continue;
+                        if(abs(vertIndex - other) == n + 1) continue;
+                        // Apply force
+                        vec3 dir = normalize(vertices[other].position - vertices[vertIndex].position);
+                        float del_force = 2 * vertices[vertIndex].mass * max(dot(vertices[vertIndex].velocity, dir), 0.0f);
+                        del_force += dot(vertices[vertIndex].currentForce, dir);
+                        // std::cout << vertIndex << " " << other << std::endl;
+                        vertices[vertIndex].currentForce -= del_force * dir;
+                    }
+                }
+            }
+        }
+        ++vertIndex;
+    }
 }
 
 // ------------------ VERTEX METHODS ------------- //

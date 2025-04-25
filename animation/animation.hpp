@@ -126,6 +126,12 @@ class Bone
     vec3 velocity;
     vec3 omega;
 
+    // Self collisions
+    bool checkSelfCollisions;
+    float delta_x;
+    int n, m;
+    std::map<std::array<int, 3>, std::vector<int>> grid;
+
     // public:
     Bone(std::string __boneName,
          Bone* __parent = nullptr,
@@ -148,6 +154,9 @@ class Bone
     void updateAll();
 
     void setOmega(vec3 __omega = vec3(0.0f));
+
+    // Self collision methods
+    void updateGridAndApplyForces(std::vector<Vertex> &vertices, float dt, int boneIndex);
 };
 
 // We go from bone's space to world space by multiplying with offset matrix

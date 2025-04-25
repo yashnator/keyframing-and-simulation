@@ -178,10 +178,14 @@ void updateScene(float t) {
 
 void updateSceneCatmull(float t) {
     float t1 = 0.0f;
-    float t2 = 1.0f;
-    float t3 = 1.5f;
-    float t4 = 2.0f;
-    float t5 = 4.5f;
+    float t2 = 1.25f;
+    float t3 = 2.5f;
+    float t4 = 3.75f;
+    float t5 = 5.0f;
+
+    std::vector<double> tVec = {t1, t2, t3, t4, t5};
+    std::vector<double> pVec = {0.0f, 20.0f, -30.0f, 30.0f, -40.0f};
+    std::vector<double> pVec2 = {0.0f, 20.0f, -20.0f, 20.0f, 40.0f};
 
     float p0 = 0.0f;
     float p1 = 5.0f;
@@ -189,26 +193,32 @@ void updateSceneCatmull(float t) {
     float p3 = 10.0f;
     float p4 = -10.0f;
 
-	float theta = catmullRom5NonUniform(t1, t2, t3, t4, t5, p0, p1, p2, p3, p4, t);
+	float theta = evaluateCatmullRom(t, pVec, tVec);
+    float theta2 = evaluateCatmullRom(t, pVec2, tVec);
     // std::cout<<t<<" "<<theta<<std::endl;
 
     // std::cout<<theta<<std::endl;
 
-    float q0 = 0.0f;
-    float q1 = 0.5f;
-    float q2 = 1.0f;
-    float q3 = 1.5f;
-    float q4 = 2.0f;
+    float q0 = -5.0f;
+    float q1 = -4.0f;
+    float q2 = -1.0f;
+    float q3 = 2.0f;
+    float q4 = 5.0f;
+    std::vector<double> qVec = {q0, q1, q2, q3, q4};
 
     theta = glm::radians(theta);  // Simple oscillating angle
-    float move = catmullRom5NonUniform(t1, t2,t3,t4,t5, q0, q1, q2, q3, q4, t);
+    theta2 = glm::radians(theta2);
+    float move = evaluateCatmullRom(t, qVec, tVec);
+    // move = 0.0f;
 	glm::quat rot = glm::angleAxis(theta, glm::vec3(1, 0, 0));
+    glm::quat rot2 = glm::angleAxis(theta2, glm::vec3(0, 1, 0));
+    // std::cout<<theta2<<std::endl;
 	boneArray[0].updateBone(glm::translate(mat4(1.0f), vec3(0.0f, 0.0f, move)));
-	boneArray[1].updateBone(vec3(0, 0, 0), rot);
+	boneArray[1].updateBone(vec3(0, 0, 0), rot2);
 	boneArray[2].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
 	boneArray[3].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
-    boneArray[4].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
-    boneArray[5].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
+    boneArray[4].updateBone(vec3(0, 0, 0), glm::angleAxis(2.0f*theta, glm::vec3(1, 0, 0)));
+    boneArray[5].updateBone(vec3(0, 0, 0), glm::angleAxis(2.0f*theta, glm::vec3(-1, 0, 0)));
     boneArray[6].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(-1, 0, 0)));
     boneArray[7].updateBone(vec3(0, 0, 0), glm::angleAxis(theta, glm::vec3(1, 0, 0)));
     boneArray[0].updateAll();
@@ -241,7 +251,7 @@ int main() {
 	while (!r.shouldQuit()) {
         float t = SDL_GetTicks64()*1e-3;
 
-        if(t<1) continue;
+        // if(t<1) continue;
 		// updateScene(t);
         updateSceneCatmull(t);
         if(t>5) break;

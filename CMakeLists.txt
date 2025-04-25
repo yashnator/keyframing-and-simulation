@@ -30,3 +30,7 @@ target_link_libraries(collision_example col781)
 add_executable(collision_example2 executables/collision_example2.cpp)
 target_include_directories(collision_example2 PUBLIC src)
 target_link_libraries(collision_example2 col781)
+
+add_executable(self_collision executables/self_collision.cpp)
+target_include_directories(self_collision PUBLIC src)
+target_link_libraries(self_collision col781)
