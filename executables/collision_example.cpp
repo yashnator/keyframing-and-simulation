@@ -101,7 +101,7 @@ void initializeScene() {
     boneArray.emplace_back(Bone("Ball", nullptr, std::move(ball), std::move(sphInternal)));
     boneArray.back().updateMesh();
     boneArray.back().mu = 0.5f;
-    boneArray.back().setOmega(vec3(0.0f, 100.0f, 0.0f));
+    // boneArray.back().setOmega(vec3(0.0f, 100.0f, 0.0f));
     // // boneArray.back().shape = Sphere(vec3(0.0f, 0.0f, 0.0f), 1.0f);
     boneArray.back().updateInit(scale(mat4(1.0f), vec3(0.5f, 0.5f, 0.5f)));
     boneArray.back().updateInit(translate(mat4(1.0f), vec3(0.0f, -1.5f, -2.5f)));

@@ -89,25 +89,17 @@ void initializeScene() {
     boneArray.back().updateInit(translate(mat4(1.0f), vec3(-0.5f, -0.5f, 0.0f)));
     boneArray.back().updateInit(scale(mat4(1.0f), vec3(3.0f, 3.0f, 3.0f)));
     boneArray.back().updateInit(rotate(mat4(1.0f), radians(-90.0f), vec3(1.0f, 0.0f, 0.0f)));
+    boneArray.back().n = n;
+    boneArray.back().m = m;
+    boneArray.back().checkSelfCollisions = true;
 
 	object = r.createObject();
     initializeBones();
     for(int i = 0; i < nv; ++i) {
         vertices[i].mass = 0.1f;
-        // if(i > 1) vertices[i].isFixed = true;
-        // DBG(vertices[i].position)
-        // std::cout << vertices[i].isFixed << std::endl;
     }
     float ks = 5.0f * 1e0;
     float kd = 1.0f;
-    // vertices[0].addStructural(&vertices[1], ks, l0, kd);
-    // vertices[0].addStructural(&vertices[2], ks, l0, kd);
-    // vertices[2].addStructural(&vertices[3], ks, l0, kd);
-    // vertices[1].addStructural(&vertices[3], ks, l0, kd);
-
-    // vertices[0].addShear(&vertices[3], ks / 5.0f, ldiag, kd / 5.0f);
-    // vertices[1].addShear(&vertices[2], ks / 5.0f, ldiag, kd / 5.0f);
-
     for(int i=0;i<(m+1)*(n+1);i++)
     {
         int c1 = i/(n+1), c2 = i%(n+1);
@@ -115,12 +107,11 @@ void initializeScene() {
         if(c1<m) vertices[i].addStructural(&vertices[i+(n+1)], 300.0f, length(vertices[i].position - vertices[i+(n+1)].position), kd);
         if(c2>0 && c1<m) vertices[i].addShear(&vertices[i+(n+1)-1], 120.0f, length(vertices[i].position - vertices[i+(n+1)-1].position), kd);
         if(c2<n && c1<m) vertices[i].addShear(&vertices[i+(n+1)+1], 120.0f, length(vertices[i].position - vertices[i+(n+1)+1].position), kd);
-        //second closest
         if(c2>1) vertices[i].addShear(&vertices[i-2], 60.0f, length(vertices[i].position - vertices[i-2].position), kd);
         if(c1<m-1) vertices[i].addShear(&vertices[i+2*(n+1)], 60.0f, length(vertices[i].position - vertices[i+2*(n+1)].position), kd);
         if(c1==m) vertices[i].isFixed = true;
-        // if(c1==m ) vertices[i].isFixed = true;
     }
+    boneArray[0].delta_x = length(vertices[0].position - vertices[1].position) / 20.0f;
 }
 
 
@@ -128,6 +119,9 @@ void updateScene(float t) {
     // const float dt = 0.1f;
     t = 0.0005f;
     for(int i=0;i<nv;i++) vertices[i].updateCurrentForces();
+    for(int i = 0; i < boneArray.size(); ++i) {
+        boneArray[i].updateGridAndApplyForces(vertices, t, i);
+    }
     for(int i=0;i<nv;i++)
     {
         vertices[i].updateGenCords(boneArray, t);
@@ -142,11 +136,6 @@ void updateScene(float t) {
     for(int i = 0; i < nv; ++i) {
         verticesData[i] = vertices[i].position;
         normalsData[i] = vertices[i].normal;
-        // if(i == 2) DBG(verticesData[i])
-        if(!vertices[i].isFixed) {
-            // std::cout << i << std::endl;
-            // DBG(vertices[i].position)
-        }
     }
     r.updateVertexAttribs(vertexBuf, nv, verticesData);
 	r.updateVertexAttribs(normalBuf, nv, normalsData);
